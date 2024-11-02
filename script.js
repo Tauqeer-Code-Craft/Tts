@@ -10,14 +10,15 @@ const stopButton = document.getElementById('stopButton');
 const downloadButton = document.getElementById('downloadButton');
 
 let voices = [];
-let mediaRecorder;
+let audioContext = null;
+let mediaRecorder = null;
 let audioChunks = [];
 
-// Load available voices
+// Load available voices and populate the dropdown
 function loadVoices() {
     voices = window.speechSynthesis.getVoices();
     voiceSelect.innerHTML = '';
-
+    
     voices.forEach((voice, index) => {
         const option = document.createElement('option');
         option.value = index;
@@ -36,7 +37,6 @@ rate.addEventListener('input', () => {
     rateValue.textContent = rate.value;
 });
 
-// Function to preview the text with selected voice, pitch, and rate
 function previewText() {
     if (textInput.value.trim() === '') return;
 
@@ -48,26 +48,16 @@ function previewText() {
     window.speechSynthesis.speak(utterance);
 }
 
-// Function to speak and record the text to download later
-async function speakText() {
-    if (textInput.value.trim() === '') return;
-
-    const utterance = new SpeechSynthesisUtterance(textInput.value);
-    utterance.voice = voices[voiceSelect.value];
-    utterance.pitch = pitch.value;
-    utterance.rate = rate.value;
-
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const dest = audioContext.createMediaStreamDestination();
-    const mediaStream = dest.stream;
-    const recorder = new MediaRecorder(mediaStream);
-
-    mediaRecorder = recorder;
+function startRecording() {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const destination = audioContext.createMediaStreamDestination();
+    mediaRecorder = new MediaRecorder(destination.stream);
+    
+    const source = audioContext.createMediaStreamSource(destination.stream);
+    source.connect(destination);
+    
     audioChunks = [];
-
-    mediaRecorder.ondataavailable = event => {
-        audioChunks.push(event.data);
-    };
+    mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
 
     mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
@@ -75,13 +65,19 @@ async function speakText() {
         downloadButton.href = audioURL;
         downloadButton.download = 'tts_output.wav';
     };
+    
+    mediaRecorder.start();
+}
 
-    recorder.start();
+function speakText() {
+    if (textInput.value.trim() === '') return;
 
-    const source = audioContext.createMediaStreamSource(dest.stream);
-    const speechSource = audioContext.createMediaStreamSource(dest.stream);
-    speechSource.connect(dest);
+    const utterance = new SpeechSynthesisUtterance(textInput.value);
+    utterance.voice = voices[voiceSelect.value];
+    utterance.pitch = pitch.value;
+    utterance.rate = rate.value;
 
+    startRecording();
     window.speechSynthesis.speak(utterance);
 
     utterance.onend = () => {
@@ -89,7 +85,6 @@ async function speakText() {
     };
 }
 
-// Event listeners for buttons
 previewButton.addEventListener('click', previewText);
 speakButton.addEventListener('click', speakText);
 
