@@ -35,7 +35,7 @@ label {
     display: block;
 }
 
-textarea, select, input, button {
+textarea, select, input, button, a {
     width: 100%;
     margin: 8px 0;
     padding: 8px;
@@ -43,13 +43,15 @@ textarea, select, input, button {
     border-radius: 5px;
 }
 
-button {
+button, a {
     cursor: pointer;
     background-color: #007bff;
     color: #fff;
     border: none;
+    text-align: center;
+    text-decoration: none;
 }
 
-button:hover {
+button:hover, a:hover {
     background-color: #0056b3;
 }
